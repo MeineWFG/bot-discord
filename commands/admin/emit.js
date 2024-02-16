@@ -5,10 +5,10 @@ module.exports = {
 		.setName('emit')
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
         .setDMPermission(false)
-		.setDescription('Emettre un évènement au choix !')
+		.setDescription('Emettre un événement au choix !')
         .addStringOption(option =>
             option.setName('event')
-                .setDescription('Choisir un évènement à emettre')
+                .setDescription('Choisir un événement à emettre')
                 .setRequired(true)
                 .addChoices(
                     {
@@ -22,13 +22,7 @@ module.exports = {
                 )),
 	async execute(interaction) {
         const evtChoices = interaction.options.getString('event');
-        if(evtChoices == 'guildMemberAdd'){
-            interaction.client.emit('guildMemberAdd', interaction.member);
-            interaction.reply({ content: 'Event guildMemberAdd emit', ephemereal: true})
-        }else{
-            interaction.client.emit('guildMemberRemove', interaction.member);
-            interaction.reply({ content: 'Event guildMemberRemove emit', ephemereal: true})
-        }
-        
+        interaction.client.emit(evtChoices, interaction.member);
+        interaction.reply({ content: `Événement ${evtChoices} émit`, ephemereal: true})
 	},
 };
