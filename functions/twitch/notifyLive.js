@@ -5,9 +5,8 @@ const { fr } = require('date-fns/locale');
 const fs = require('fs');
 const { imagesJSON, serverJSON, twitchJSON } = require('../../json/config.json');
 
-
 module.exports = {
-    async getStreamData (announcementChannel) {
+    async notifyLive (announcementChannel) {
         //Lecture du fichier config.json
         var configJSON = JSON.parse(fs.readFileSync('./json/config.json'));
 
