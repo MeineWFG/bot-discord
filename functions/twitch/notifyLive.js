@@ -1,5 +1,5 @@
 const axios = require('axios');
-const { EmbedBuilder } = require('discord.js');
+const { Colors, EmbedBuilder } = require('discord.js');
 const { format } = require('date-fns');
 const { fr } = require('date-fns/locale');
 const fs = require('fs');
@@ -36,7 +36,7 @@ module.exports = {
                 const urlThumbnail = data.thumbnail_url.replace('{width}', '1920').replace('{height}', '1080');
 
                 const embed = new EmbedBuilder()
-                    .setColor(`#${Math.floor(Math.random()*16777215).toString(16)}`)
+                    .setColor(Colors[Object.keys(Colors)[Math.floor(Math.random() * Object.keys(Colors).length)]])
                     .setTitle(data.title)
                     .setURL('https://www.twitch.tv/' + data.user_login)
                     .setAuthor({ name: data.user_name + ' est en direct !', iconURL: `attachment://${imagesJSON.stream_icon}`})

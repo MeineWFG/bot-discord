@@ -13,7 +13,7 @@ module.exports = {
                 { name: 'Uptime', value: `<t:${parseInt(interaction.client.readyTimestamp / 1000)}:R>`, inline: true}
             )
             .setTimestamp()
-            .setFooter({ text: interaction.member.user.username, iconURL: interaction.member.displayAvatarURL() });
+            .setFooter({ text: interaction.member.displayName, iconURL: interaction.member.displayAvatarURL() });
         interaction.reply({embeds: [embed]})
 	},
 };
