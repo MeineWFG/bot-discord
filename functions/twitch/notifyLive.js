@@ -33,7 +33,7 @@ module.exports = {
                 fs.writeFileSync('./json/config.json', JSON.stringify(configJSON, null, 2));
                 
                 const randomImage = imagesJSON.stream[Math.floor(Math.random() * imagesJSON.stream.length)];
-                const urlThumbnail = data.thumbnail_url.replace('{width}', '1920').replace('{height}', '1080');
+                const urlThumbnail = data.thumbnail_url.replace('{width}', '1920').replace('{height}', (Math.floor(Math.random() * (1080 - 1070 + 1)) + 1070).toString());
 
                 const embed = new EmbedBuilder()
                     .setColor(Colors[Object.keys(Colors)[Math.floor(Math.random() * Object.keys(Colors).length)]])
