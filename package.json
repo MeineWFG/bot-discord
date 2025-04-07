@@ -20,6 +20,7 @@
     "axios": "^1.4.0",
     "date-fns": "^3.3.1",
     "discord.js": "^14.14.1",
-    "node-cron": "^3.0.3"
+    "node-cron": "^3.0.3",
+    "rss-parser": "^3.13.0"
   }
 }
