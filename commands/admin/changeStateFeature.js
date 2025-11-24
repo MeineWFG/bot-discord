@@ -1,5 +1,5 @@
-const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
-const fs = require('fs');
+const { config } = require('../../config/config.js');
+const { SlashCommandBuilder, MessageFlags, PermissionFlagsBits } = require('discord.js');
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -20,17 +20,11 @@ module.exports = {
 	async execute(interaction) {
         const evtChoices = interaction.options.getString('feature');
 
-        //Lecture du fichier config.json
-        var configJSON = JSON.parse(fs.readFileSync('./json/config.json'));
-
-        const newStateFeature = configJSON.flagFeature[evtChoices] == "true" ? "false" : "true";
+        const newStateFeature = config.flagFeature[evtChoices] == "true" ? "false" : "true";
 
         //Actualisation de la feature
-        configJSON.flagFeature[evtChoices] = newStateFeature
+        config.flagFeature[evtChoices] = newStateFeature;
 
-        //Réecriture du fichier config.json avec format
-        fs.writeFileSync('./json/config.json', JSON.stringify(configJSON, null, 2));
-
-        interaction.reply({ content: `La feature ${evtChoices} a été ${newStateFeature == "true" ? "activé" : "désactivé"} !`, ephemereal: true})
+        interaction.reply({ content: `La feature ${evtChoices} a été ${newStateFeature == "true" ? "activé" : "désactivé"} !`, flags: MessageFlags.Ephemeral })
 	},
 };

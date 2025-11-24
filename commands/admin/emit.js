@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, MessageFlags, PermissionFlagsBits } = require('discord.js');
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -23,6 +23,6 @@ module.exports = {
 	async execute(interaction) {
         const evtChoices = interaction.options.getString('event');
         interaction.client.emit(evtChoices, interaction.member);
-        interaction.reply({ content: `Événement ${evtChoices} émit`, ephemereal: true})
+        interaction.reply({ content: `Événement ${evtChoices} émit`, flags: MessageFlags.Ephemeral})
 	},
 };

@@ -1,4 +1,4 @@
-const { botJSON } = require('./json/config.json');
+const { config } = require('./config/config.js');
 const { Client, GatewayIntentBits } = require('discord.js');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -12,4 +12,4 @@ for (const file of handlerFiles){
 	require(filePath) (client);
 }
 
-client.login(botJSON.token);
+client.login(config.discord.token);

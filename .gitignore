@@ -1,5 +1,5 @@
 /node_modules
-/json
+/config
 /images
 .dockerignore
 Dockerfile
