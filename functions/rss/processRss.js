@@ -1,69 +1,148 @@
 const { config } = require('../../config/config.js');
 const { Colors, EmbedBuilder } = require('discord.js');
 const Parser = require('rss-parser');
+const axios = require('axios');
 const lastError = {};
 
 module.exports = {
     async processRss(client) {
-        try {
-            let parser = new Parser({ 
-                requestOptions: {
-                     headers: { 
-                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36", 
-                        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", 
-                        "Accept-Language": "en-US,en;q=0.9", 
-                    } 
-                }, 
-                customFields: { 
-                    item: ['media:content'] 
-                } 
-            });
+        const parser = new Parser({ 
+            customFields: { 
+                item: ['media:content', 'description'] 
+            } 
+        });
 
-            for (const rssKey of Object.keys(config.server.rss)) {
+        for (const rssKey of Object.keys(config.server.rss)) {
+            try {
                 const rss = config.server.rss[rssKey];
 
                 const channel = client.channels.cache.get(config.server.channel[rssKey]);
                 if (!channel) {
-                    console.error(`Channel introuvable pour RSS: ${rssKey}`);
+                    console.error(`❌ Channel introuvable pour RSS: ${rssKey}`);
                     continue;
                 }
 
-                const feed = await parser.parseURL(rss.lien);
+                let feed;
+
+                // Stratégie spéciale pour HLTV
+                if (rssKey === 'hltv' || rss.lien.includes('hltv.org')) {
+                    try {
+                        // Méthode 1: Essayer avec AllOrigins (alternative à RSS2JSON)
+                        const allOriginsUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(rss.lien)}`;
+                        
+                        const response = await axios.get(allOriginsUrl, {
+                            timeout: 15000,
+                            headers: {
+                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                            }
+                        });
+
+                        feed = await parser.parseString(response.data);
+
+                    } catch (allOriginsError) {
+                        console.warn(`⚠️ AllOrigins échoué: ${allOriginsError.message}`);
+                        
+                        try {
+                            // Méthode 2: Essayer avec CORS-Anywhere
+                            const corsUrl = `https://corsproxy.io/?${encodeURIComponent(rss.lien)}`;
+                            
+                            const response = await axios.get(corsUrl, {
+                                timeout: 15000,
+                                headers: {
+                                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                                }
+                            });
+
+                            feed = await parser.parseString(response.data);
+
+                        } catch (corsError) {
+                            console.warn(`⚠️ CorsProxy échoué: ${corsError.message}`);
+                            
+                            // Méthode 3: Essayer directement avec headers agressifs
+                            const response = await axios.get(rss.lien, {
+                                headers: {
+                                    "User-Agent": "Googlebot/2.1 (+http://www.google.com/bot.html)",
+                                    "Accept": "application/rss+xml, application/xml, text/xml, */*",
+                                    "Accept-Language": "en-US,en;q=0.9",
+                                },
+                                timeout: 15000,
+                                maxRedirects: 5
+                            });
+
+                            feed = await parser.parseString(response.data);
+                        }
+                    }
+
+                } else {
+                    // Méthode standard pour les autres flux
+                    const response = await axios.get(rss.lien, {
+                        headers: {
+                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+                            "Accept": "application/rss+xml, application/xml, text/xml, */*",
+                            "Accept-Language": "en-US,en;q=0.9",
+                            "Referer": "https://www.google.com/"
+                        },
+                        timeout: 10000,
+                        maxRedirects: 5
+                    });
+
+                    feed = await parser.parseString(response.data);
+                }
+
                 lastError[rssKey] = null;
 
+                // Traitement des articles (du plus ancien au plus récent)
                 for (const item of feed.items.slice().reverse()) {
                     if (!rss.arrayNews.includes(item.link)) {
+                        
+                        if (rss.arrayNews.length >= 100) {
+                            rss.arrayNews.shift();
+                        }
+                        rss.arrayNews.push(item.link);
 
-                        if (rss.arrayNews.length > 100) {
-                            rss.arrayNews.pop();
-                            rss.arrayNews.unshift(item.link);
-                        } else {
-                            rss.arrayNews.push(item.link);
+                        let description = item.contentSnippet || item.content || item.description || 'Aucune description disponible';
+                        // Nettoyer les balises HTML
+                        description = description.replace(/<[^>]*>/g, '');
+                        if (description.length > 4096) {
+                            description = description.substring(0, 4093) + '...';
+                        }
+
+                        let imageUrl = rss.image;
+                        if (item["media:content"]?.$.url) {
+                            imageUrl = item["media:content"].$.url;
+                        } else if (item.enclosure?.url) {
+                            imageUrl = item.enclosure.url;
+                        } else if (item.thumbnail) {
+                            imageUrl = item.thumbnail;
                         }
 
                         const embed = new EmbedBuilder()
-                            .setColor(
-                                Colors[
-                                    Object.keys(Colors)[
-                                        Math.floor(Math.random() * Object.keys(Colors).length)
-                                    ]
-                                ]
-                            )
-                            .setTitle(item.title)
+                            .setColor(Colors[Object.keys(Colors)[Math.floor(Math.random() * Object.keys(Colors).length)]])
+                            .setTitle(item.title.length > 256 ? item.title.substring(0, 253) + '...' : item.title)
                             .setURL(item.link)
-                            .setImage(item["media:content"]?.$.url || rss.image)
-                            .setDescription(item["contentSnippet"] || item.content)
-                            .setTimestamp();
+                            .setDescription(description)
+                            .setTimestamp(item.pubDate ? new Date(item.pubDate) : new Date());
+
+                        if (imageUrl) {
+                            embed.setImage(imageUrl);
+                        }
+
+                        if (item.creator || item.author) {
+                            embed.setFooter({ text: `Par ${item.creator || item.author}` });
+                        }
 
                         await channel.send({ embeds: [embed] });
+                        await new Promise(resolve => setTimeout(resolve, 1000));
                     }
                 }
-            }
 
-        } catch (err) {
-            const msg = `Erreur lors de la récupération du flux RSS : ${err.message}`;
-            console.error(msg);
-            return null;
+                await new Promise(resolve => setTimeout(resolve, 2000));
+
+            } catch (err) {
+                console.error(`❌ Erreur sur ${rssKey}: ${err.message}`);
+                lastError[rssKey] = err.message;
+                continue;
+            }
         }
     }
 };

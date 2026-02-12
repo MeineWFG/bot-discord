@@ -4,8 +4,7 @@ const { Events } = require('discord.js');
 const { notifyLive } = require('../functions/twitch/notifyLive.js');
 const { updateToken } = require('../functions/twitch/updateToken.js');
 const { processRss } = require('../functions/rss/processRss.js');
-const { initRssMemory } = require('../functions/rss/initRssMemory.js');
-const { fantasyUpdate } = require('../functions/hltv/fantasyUpdate.js')
+const { initRssMemory } = require('../functions/rss/initRssMemory.js'); 
 
 module.exports = {
 	name: Events.ClientReady,
