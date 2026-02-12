@@ -1,15 +1,15 @@
 const { config } = require('../../config/config.js');
-const { Colors, EmbedBuilder } = require('discord.js');
+const { EmbedBuilder } = require('discord.js');
 const Parser = require('rss-parser');
 const axios = require('axios');
-const lastError = {};
+const { getRandomColor } = require('../../utils/helpers.js');
 
 module.exports = {
     async processRss(client) {
-        const parser = new Parser({ 
-            customFields: { 
-                item: ['media:content', 'description'] 
-            } 
+        const parser = new Parser({
+            customFields: {
+                item: ['media:content', 'description']
+            }
         });
 
         for (const rssKey of Object.keys(config.server.rss)) {
@@ -29,7 +29,7 @@ module.exports = {
                     try {
                         // Méthode 1: Essayer avec AllOrigins (alternative à RSS2JSON)
                         const allOriginsUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(rss.lien)}`;
-                        
+
                         const response = await axios.get(allOriginsUrl, {
                             timeout: 15000,
                             headers: {
@@ -41,11 +41,11 @@ module.exports = {
 
                     } catch (allOriginsError) {
                         console.warn(`⚠️ AllOrigins échoué: ${allOriginsError.message}`);
-                        
+
                         try {
                             // Méthode 2: Essayer avec CORS-Anywhere
                             const corsUrl = `https://corsproxy.io/?${encodeURIComponent(rss.lien)}`;
-                            
+
                             const response = await axios.get(corsUrl, {
                                 timeout: 15000,
                                 headers: {
@@ -57,7 +57,7 @@ module.exports = {
 
                         } catch (corsError) {
                             console.warn(`⚠️ CorsProxy échoué: ${corsError.message}`);
-                            
+
                             // Méthode 3: Essayer directement avec headers agressifs
                             const response = await axios.get(rss.lien, {
                                 headers: {
@@ -89,16 +89,17 @@ module.exports = {
                     feed = await parser.parseString(response.data);
                 }
 
-                lastError[rssKey] = null;
+                if (!feed || !feed.items) continue;
 
                 // Traitement des articles (du plus ancien au plus récent)
                 for (const item of feed.items.slice().reverse()) {
-                    if (!rss.arrayNews.includes(item.link)) {
-                        
-                        if (rss.arrayNews.length >= 100) {
-                            rss.arrayNews.shift();
+                    if (!rss.arrayNews.has(item.link)) {
+
+                        if (rss.arrayNews.size >= 100) {
+                            const firstValue = rss.arrayNews.values().next().value;
+                            rss.arrayNews.delete(firstValue);
                         }
-                        rss.arrayNews.push(item.link);
+                        rss.arrayNews.add(item.link);
 
                         let description = item.contentSnippet || item.content || item.description || 'Aucune description disponible';
                         // Nettoyer les balises HTML
@@ -117,7 +118,7 @@ module.exports = {
                         }
 
                         const embed = new EmbedBuilder()
-                            .setColor(Colors[Object.keys(Colors)[Math.floor(Math.random() * Object.keys(Colors).length)]])
+                            .setColor(getRandomColor())
                             .setTitle(item.title.length > 256 ? item.title.substring(0, 253) + '...' : item.title)
                             .setURL(item.link)
                             .setDescription(description)
@@ -140,7 +141,6 @@ module.exports = {
 
             } catch (err) {
                 console.error(`❌ Erreur sur ${rssKey}: ${err.message}`);
-                lastError[rssKey] = err.message;
                 continue;
             }
         }

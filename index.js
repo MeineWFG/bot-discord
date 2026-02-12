@@ -9,7 +9,18 @@ const handlersPath = path.join(__dirname, './handlers');
 const handlerFiles = fs.readdirSync(handlersPath).filter(file => file.endsWith('.js'));
 for (const file of handlerFiles){
 	const filePath = path.join(handlersPath, file);
-	require(filePath) (client);
+	require(filePath)(client);
 }
 
-client.login(config.discord.token);
+process.on('unhandledRejection', (error) => {
+	console.error('Unhandled promise rejection:', error);
+});
+
+process.on('uncaughtException', (error) => {
+	console.error('Uncaught exception:', error);
+});
+
+client.login(config.discord.token).catch((error) => {
+	console.error('Erreur lors de la connexion à Discord:', error);
+	process.exit(1);
+});

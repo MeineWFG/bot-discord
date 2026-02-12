@@ -14,6 +14,6 @@ module.exports = {
             )
             .setTimestamp()
             .setFooter({ text: interaction.member.displayName, iconURL: interaction.member.displayAvatarURL() });
-        interaction.reply({embeds: [embed]})
+        await interaction.reply({embeds: [embed]});
 	},
 };

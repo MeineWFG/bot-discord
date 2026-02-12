@@ -5,20 +5,31 @@ module.exports = {
 	name: Events.VoiceStateUpdate,
 	once: false,
 	async execute(oldState, newState) {
+		if (config.flagFeature.bibooMove !== true) return;
+		if (newState.member.id !== config.server.member.biboo) return;
 
-        if(config.flagFeature.bibooMove == "true"){
-            //Move mute
-            if(newState.member.id == config.server.member.biboo && (((oldState.deaf == true && newState.deaf == true && oldState.streaming == true && newState.streaming == false)) || (newState.streaming == false && oldState.deaf == false && newState.deaf == true))){
-                newState.member.voice.setChannel(config.server.channel.bibooMuted)
+		try {
+			const wasDeaf = oldState.deaf === true;
+			const isDeaf = newState.deaf === true;
+			const wasStreaming = oldState.streaming === true;
+			const isStreaming = newState.streaming === true;
+			const isInMutedChannel = newState.channelId === config.server.channel.bibooMuted;
 
-                //Actualisation du channel muted
-                config.server.channel.bibooBeforeMuted = newState.channelId;
-            }
+			//Move mute
+			const stoppedStreamWhileDeaf = wasDeaf && isDeaf && wasStreaming && !isStreaming;
+			const justDeafened = !wasDeaf && isDeaf && !isStreaming;
 
-            //Retour dans le channel
-            if(newState.member.id == config.server.member.biboo && newState.channelId == config.server.channel.bibooMuted && newState.streaming == false && oldState.deaf == true && newState.deaf == false){
-                newState.member.voice.setChannel(config.server.channel.bibooBeforeMuted)
-            }
-        }
+			if (stoppedStreamWhileDeaf || justDeafened) {
+				config.server.channel.bibooBeforeMuted = newState.channelId;
+				await newState.member.voice.setChannel(config.server.channel.bibooMuted);
+			}
+
+			//Retour dans le channel
+			if (isInMutedChannel && !isStreaming && wasDeaf && !isDeaf) {
+				await newState.member.voice.setChannel(config.server.channel.bibooBeforeMuted);
+			}
+		} catch (error) {
+			console.error('[VoiceStateUpdate] Erreur:', error);
+		}
 	},
 };

@@ -20,11 +20,11 @@ module.exports = {
 	async execute(interaction) {
         const evtChoices = interaction.options.getString('feature');
 
-        const newStateFeature = config.flagFeature[evtChoices] == "true" ? "false" : "true";
+        const newStateFeature = !config.flagFeature[evtChoices];
 
         //Actualisation de la feature
         config.flagFeature[evtChoices] = newStateFeature;
 
-        interaction.reply({ content: `La feature ${evtChoices} a été ${newStateFeature == "true" ? "activé" : "désactivé"} !`, flags: MessageFlags.Ephemeral })
+        await interaction.reply({ content: `La feature ${evtChoices} a été ${newStateFeature ? "activé" : "désactivé"} !`, flags: MessageFlags.Ephemeral });
 	},
 };

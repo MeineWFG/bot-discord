@@ -7,11 +7,19 @@ module.exports = async client => {
 
     for (const file of eventFiles) {
         const filePath = path.join(eventsPath, file);
-        const event = require(filePath);
-        if (event.once) {
-            client.once(event.name, (...args) => event.execute(...args));
-        } else {
-            client.on(event.name, (...args) => event.execute(...args));
+        try {
+            const event = require(filePath);
+            if (!event.name || !event.execute) {
+                console.log(`[WARNING] L'événement ${filePath} est invalide (name ou execute manquant).`);
+                continue;
+            }
+            if (event.once) {
+                client.once(event.name, (...args) => event.execute(...args));
+            } else {
+                client.on(event.name, (...args) => event.execute(...args));
+            }
+        } catch (error) {
+            console.error(`[ERROR] Impossible de charger l'événement ${filePath}:`, error);
         }
     }
 }

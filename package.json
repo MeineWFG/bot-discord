@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "start": "node index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "deploy": "node utils/deployCommands.js"
   },
@@ -22,7 +23,6 @@
     "date-fns": "^3.3.1",
     "discord.js": "^14.14.1",
     "node-cron": "^3.0.3",
-    "puppeteer": "^24.31.0",
     "rss-parser": "^3.13.0"
   }
 }

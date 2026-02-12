@@ -23,6 +23,6 @@ module.exports = {
 	async execute(interaction) {
         const evtChoices = interaction.options.getString('event');
         interaction.client.emit(evtChoices, interaction.member);
-        interaction.reply({ content: `Événement ${evtChoices} émit`, flags: MessageFlags.Ephemeral})
+        await interaction.reply({ content: `Événement ${evtChoices} émit`, flags: MessageFlags.Ephemeral });
 	},
 };

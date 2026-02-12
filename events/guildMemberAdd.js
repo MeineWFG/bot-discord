@@ -1,20 +1,30 @@
 const { config } = require('../config/config.js');
-const { Colors, Events } = require('discord.js');
-const { EmbedBuilder } = require('discord.js');
+const { Events, EmbedBuilder } = require('discord.js');
+const path = require('node:path');
+const { getRandomElement, getRandomColor } = require('../utils/helpers.js');
 
 module.exports = {
 	name: Events.GuildMemberAdd,
 	once: false,
 	async execute(member) {
-        const welcomeChannel = member.guild.channels.cache.get(config.server.channel.welcome);
-        const randomImage = config.images.welcome[Math.floor(Math.random() * config.images.welcome.length)];
-        const embed = new EmbedBuilder()
-            .setAuthor({name: member.displayName, iconURL: member.displayAvatarURL()})
-            .setColor(Colors[Object.keys(Colors)[Math.floor(Math.random() * Object.keys(Colors).length)]])
-			.setThumbnail(`attachment://${randomImage}`)
-            .setDescription(config.server.text.welcome[Math.floor(Math.random() * config.server.text.welcome.length)])
-        
-		member.roles.add(config.server.role.idValidateRole);
-        welcomeChannel.send({ content: `<@${member.user.id}>`, embeds: [embed], files: [`./images/${randomImage}`] })
+		try {
+			const welcomeChannel = member.guild.channels.cache.get(config.server.channel.welcome);
+			if (!welcomeChannel) {
+				console.error('[GuildMemberAdd] Channel de bienvenue introuvable.');
+				return;
+			}
+
+			const randomImage = getRandomElement(config.images.welcome);
+			const embed = new EmbedBuilder()
+				.setAuthor({name: member.displayName, iconURL: member.displayAvatarURL()})
+				.setColor(getRandomColor())
+				.setThumbnail(`attachment://${randomImage}`)
+				.setDescription(getRandomElement(config.server.text.welcome));
+
+			await member.roles.add(config.server.role.idValidateRole);
+			await welcomeChannel.send({ content: `<@${member.user.id}>`, embeds: [embed], files: [path.join(__dirname, '..', 'images', randomImage)] });
+		} catch (error) {
+			console.error('[GuildMemberAdd] Erreur:', error);
+		}
 	},
 };

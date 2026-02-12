@@ -18,12 +18,7 @@ async function initRssMemory(client) {
             for (const msg of messages.values()) {
                 for (const embed of msg.embeds) {
                     if (!embed.url) continue;
-
-                    const link = embed.url;
-
-                    if (!config.server.rss[type].arrayNews.includes(link)) {
-                        config.server.rss[type].arrayNews.push(link);
-                    }
+                    config.server.rss[type].arrayNews.add(embed.url);
                 }
             }
         } catch (err) {
