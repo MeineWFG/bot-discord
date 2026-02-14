@@ -4,8 +4,39 @@ const Parser = require('rss-parser');
 const axios = require('axios');
 const { getRandomColor } = require('../../utils/helpers.js');
 
+function normalizeUrl(url) {
+    try {
+        const u = new URL(url);
+        u.hash = '';
+        u.searchParams.delete('utm_source');
+        u.searchParams.delete('utm_medium');
+        u.searchParams.delete('utm_campaign');
+        u.searchParams.delete('utm_content');
+        u.searchParams.delete('utm_term');
+        // Supprime le slash final
+        u.pathname = u.pathname.replace(/\/+$/, '') || '/';
+        return u.toString();
+    } catch {
+        return url;
+    }
+}
+
+let isProcessing = false;
+
 module.exports = {
+    normalizeUrl,
     async processRss(client) {
+        if (isProcessing) return;
+        isProcessing = true;
+        try {
+            return await processRssInternal(client);
+        } finally {
+            isProcessing = false;
+        }
+    }
+};
+
+async function processRssInternal(client) {
         const parser = new Parser({
             customFields: {
                 item: ['media:content', 'description']
@@ -26,53 +57,17 @@ module.exports = {
 
                 // Stratégie spéciale pour HLTV
                 if (rssKey === 'hltv' || rss.lien.includes('hltv.org')) {
-                    try {
-                        // Méthode 1: Essayer avec AllOrigins (alternative à RSS2JSON)
-                        const allOriginsUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(rss.lien)}`;
+                    const response = await axios.get(rss.lien, {
+                        headers: {
+                            "User-Agent": "Googlebot/2.1 (+http://www.google.com/bot.html)",
+                            "Accept": "application/rss+xml, application/xml, text/xml, */*",
+                            "Accept-Language": "en-US,en;q=0.9",
+                        },
+                        timeout: 15000,
+                        maxRedirects: 5
+                    });
 
-                        const response = await axios.get(allOriginsUrl, {
-                            timeout: 15000,
-                            headers: {
-                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-                            }
-                        });
-
-                        feed = await parser.parseString(response.data);
-
-                    } catch (allOriginsError) {
-                        console.warn(`⚠️ AllOrigins échoué: ${allOriginsError.message}`);
-
-                        try {
-                            // Méthode 2: Essayer avec CORS-Anywhere
-                            const corsUrl = `https://corsproxy.io/?${encodeURIComponent(rss.lien)}`;
-
-                            const response = await axios.get(corsUrl, {
-                                timeout: 15000,
-                                headers: {
-                                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-                                }
-                            });
-
-                            feed = await parser.parseString(response.data);
-
-                        } catch (corsError) {
-                            console.warn(`⚠️ CorsProxy échoué: ${corsError.message}`);
-
-                            // Méthode 3: Essayer directement avec headers agressifs
-                            const response = await axios.get(rss.lien, {
-                                headers: {
-                                    "User-Agent": "Googlebot/2.1 (+http://www.google.com/bot.html)",
-                                    "Accept": "application/rss+xml, application/xml, text/xml, */*",
-                                    "Accept-Language": "en-US,en;q=0.9",
-                                },
-                                timeout: 15000,
-                                maxRedirects: 5
-                            });
-
-                            feed = await parser.parseString(response.data);
-                        }
-                    }
-
+                    feed = await parser.parseString(response.data);
                 } else {
                     // Méthode standard pour les autres flux
                     const response = await axios.get(rss.lien, {
@@ -93,13 +88,14 @@ module.exports = {
 
                 // Traitement des articles (du plus ancien au plus récent)
                 for (const item of feed.items.slice().reverse()) {
-                    if (!rss.arrayNews.has(item.link)) {
+                    const normalized = normalizeUrl(item.link);
+                    if (!rss.arrayNews.has(normalized)) {
 
                         if (rss.arrayNews.size >= 100) {
                             const firstValue = rss.arrayNews.values().next().value;
                             rss.arrayNews.delete(firstValue);
                         }
-                        rss.arrayNews.add(item.link);
+                        rss.arrayNews.add(normalized);
 
                         let description = item.contentSnippet || item.content || item.description || 'Aucune description disponible';
                         // Nettoyer les balises HTML
@@ -144,5 +140,4 @@ module.exports = {
                 continue;
             }
         }
-    }
-};
+}

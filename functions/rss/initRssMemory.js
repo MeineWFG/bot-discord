@@ -1,4 +1,5 @@
 const { config } = require('../../config/config.js');
+const { normalizeUrl } = require('./processRss.js');
 
 async function initRssMemory(client) {
     const rssTypes = Object.keys(config.server.rss);
@@ -18,7 +19,7 @@ async function initRssMemory(client) {
             for (const msg of messages.values()) {
                 for (const embed of msg.embeds) {
                     if (!embed.url) continue;
-                    config.server.rss[type].arrayNews.add(embed.url);
+                    config.server.rss[type].arrayNews.add(normalizeUrl(embed.url));
                 }
             }
         } catch (err) {
